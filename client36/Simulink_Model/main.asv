@@ -1,0 +1,25 @@
+% Create a new Simulink model
+model_name = 'Seismic_and_Overload_Sensors';
+new_system(model_name);
+open_system(model_name);
+
+% Add blocks to the model
+seismic_1_block = add_block('simulink/Commonly Used Blocks/Constant', [model_name '/Seismic_1']);
+seismic_2_block = add_block('simulink/Commonly Used Blocks/Constant', [model_name '/Seismic_2']);
+overload_block = add_block('simulink/Commonly Used Blocks/Constant', [model_name '/Overload']);
+scope_block = add_block('simulink/Sinks/Scope', [model_name '/Scope']);
+
+% Configure the seismic sensor blocks
+set_param(seismic_1_block, 'Value', 'sin(0.1*t)', 'Position', [100, 100, 130, 130]);
+set_param(seismic_2_block, 'Value', 'cos(0.2*t)', 'Position', [100, 200, 130, 230]);
+
+% Connect blocks
+add_line(model_name, 'Seismic_1/1', 'Scope/1');
+add_line(model_name, 'Seismic_2/1', 'Scope/2');
+add_line(model_name, 'Overload/1', 'Scope/3');
+
+% Arrange blocks neatly
+Simulink.BlockDiagram.arrangeSystem(model_name);
+
+% Open the model
+open_system(model_name);
