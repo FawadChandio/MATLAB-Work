@@ -1,0 +1,60 @@
+// Define pins for analog sensors (or simulate if not connected)
+const int h2Pin = A0;
+const int ch4Pin = A1;
+const int c2h6Pin = A2;
+const int c2h4Pin = A3;
+const int c2h2Pin = A4;
+const int tempPin = A5;
+const int loadPin = A6;
+
+bool handshakeDone = false;
+
+void setup() {
+  Serial.begin(9600);
+  while (!Serial);
+  delay(2000); // Let serial settle
+}
+
+void loop() {
+  // Handshake
+  if (!handshakeDone && Serial.available()) {
+    String input = Serial.readStringUntil('\n');
+    input.trim();
+    if (input == "TEST") {
+      Serial.println("ARDUINO");
+      handshakeDone = true;
+    }
+    return;
+  }
+
+  if (!handshakeDone) return;
+
+  // Simulated sensor values (replace with real analogRead if needed)
+  float h2 = analogRead(h2Pin) * (100.0 / 1023.0);
+  float ch4 = analogRead(ch4Pin) * (100.0 / 1023.0);
+  float c2h6 = analogRead(c2h6Pin) * (100.0 / 1023.0);
+  float c2h4 = analogRead(c2h4Pin) * (100.0 / 1023.0);
+  float c2h2 = analogRead(c2h2Pin) * (100.0 / 1023.0);
+  float temp = analogRead(tempPin) * (50.0 / 1023.0);
+  float load = analogRead(loadPin) * (100.0 / 1023.0);
+
+  // Simulate remaining gases
+  float co = random(50, 400);    // CO (ppm)
+  float co2 = random(1000, 6000); // CO2 (ppm)
+  float h2o = random(5, 40);     // H2O (ppm)
+
+  // Format output
+  String output = "H2:" + String(h2, 2) + ","
+                + "CH4:" + String(ch4, 2) + ","
+                + "C2H6:" + String(c2h6, 2) + ","
+                + "C2H4:" + String(c2h4, 2) + ","
+                + "C2H2:" + String(c2h2, 2) + ","
+                + "CO:" + String(co, 2) + ","
+                + "CO2:" + String(co2, 2) + ","
+                + "H2O:" + String(h2o, 2) + ","
+                + "TEMP:" + String(temp, 2) + ","
+                + "LOAD:" + String(load, 2);
+
+  Serial.println(output);
+  delay(2000); // Send every 2 sec
+}

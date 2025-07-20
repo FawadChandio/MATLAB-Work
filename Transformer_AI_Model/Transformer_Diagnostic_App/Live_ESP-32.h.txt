@@ -1,0 +1,130 @@
+#include <WiFi.h>
+#include <HTTPClient.h>
+
+// WiFi credentials
+const char* ssid = "";
+const char* password = "";
+
+// ThingSpeak settings
+const char* channel1ApiKey = "Y90BTBOQ908PATXC"; // Gases channel
+const char* channel2ApiKey = "KHCY1QQD1ZF90CKI"; // Load & Temp channel
+const char* server = "http://api.thingspeak.com/update";
+
+// Sensor pins (uncomment when sensors are connected)
+// const int h2Pin = 34;
+// const int ch4Pin = 35;
+// const int c2h6Pin = 32;
+// const int c2h4Pin = 33;
+// const int c2h2Pin = 25;
+// const int tempPin = 26;
+// const int loadPin = 27;
+
+// Gas concentration variables (ppm)
+float h2 = 50.0, ch4 = 120.0, c2h6 = 66.0, c2h4 = 80.0, c2h2 = 5.0;
+float co = 360.0, co2 = 2000.0, h2o = 25.0;  // Additional gases
+float temp = 25.0, load = 50.0;  // Temperature (°C) and Load (%)
+
+// For exponential moving average smoothing
+const float alpha = 0.3;  // Smoothing factor (0-1)
+
+void setup() {
+  Serial.begin(115200);
+  
+  // Initialize WiFi
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting to WiFi");
+  
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nWiFi connected!");
+  
+  // Initialize sensors (uncomment when ready)
+  // pinMode(h2Pin, INPUT);
+  // pinMode(ch4Pin, INPUT);
+  // ... other pins
+}
+
+void loop() {
+  // 1. SIMULATED DATA (Replace with actual sensor readings when available)
+  simulateSensorData();
+  
+  // 2. SEND TO THINGSPEAK
+  sendToThingSpeak();
+  
+  delay(15000);  // 15-second delay (ThingSpeak free account limit)
+}
+
+void simulateSensorData() {
+  // Apply realistic variations based on typical transformer gas behavior
+  h2 = constrain(h2 + random(-5, 5), 10, 100);
+  ch4 = constrain(ch4 + random(-10, 10), 50, 200);
+  c2h6 = constrain(c2h6 + random(-5, 5), 30, 100);
+  c2h4 = constrain(c2h4 + random(-5, 5), 50, 150);
+  c2h2 = constrain(c2h2 + random(-1, 1), 0, 10);
+  
+  // Additional gases with different variation patterns
+  co = constrain(co + random(-20, 20), 300, 500);
+  co2 = constrain(co2 + random(-50, 50), 1500, 2500);
+  h2o = constrain(h2o + random(-2, 2), 20, 30);
+  
+  // Operating conditions
+  temp = constrain(temp + random(-1, 1), 20, 30);
+  load = constrain(load + random(-5, 5), 40, 60);
+  
+  Serial.println("Current Readings:");
+  Serial.printf("H2: %.1f, CH4: %.1f, C2H6: %.1f, C2H4: %.1f, C2H2: %.1f\n", 
+               h2, ch4, c2h6, c2h4, c2h2);
+  Serial.printf("CO: %.1f, CO2: %.1f, H2O: %.1f\n", co, co2, h2o);
+  Serial.printf("Temp: %.1f°C, Load: %.1f%%\n\n", temp, load);
+}
+
+void sendToThingSpeak() {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("WiFi disconnected. Attempting to reconnect...");
+    WiFi.reconnect();
+    delay(5000);
+    return;
+  }
+
+  // Send gas data to Channel 1
+  HTTPClient http1;
+  String url1 = String(server) + "?api_key=" + channel1ApiKey +
+              "&field1=" + String(h2, 1) +    // H2
+              "&field2=" + String(ch4, 1) +   // CH4
+              "&field3=" + String(c2h6, 1) +  // C2H6
+              "&field4=" + String(c2h4, 1) +  // C2H4
+              "&field5=" + String(c2h2, 1) +  // C2H2
+              "&field6=" + String(co, 1) +    // CO
+              "&field7=" + String(co2, 1) +   // CO2
+              "&field8=" + String(h2o, 1);    // H2O
+
+  Serial.println("Sending to Channel 1: " + url1);
+  http1.begin(url1);
+  int httpCode1 = http1.GET();
+  
+  if (httpCode1 == HTTP_CODE_OK) {
+    Serial.println("Channel 1 update successful");
+  } else {
+    Serial.printf("Channel 1 update failed, error: %s\n", http1.errorToString(httpCode1).c_str());
+  }
+  http1.end();
+
+  // Send load & temp to Channel 2
+  HTTPClient http2;
+  String url2 = String(server) + "?api_key=" + channel2ApiKey +
+              "&field1=" + String(load, 1) +  // Load
+              "&field2=" + String(temp, 1);   // Temp
+
+  Serial.println("Sending to Channel 2: " + url2);
+  http2.begin(url2);
+  int httpCode2 = http2.GET();
+  
+  if (httpCode2 == HTTP_CODE_OK) {
+    Serial.println("Channel 2 update successful");
+  } else {
+    Serial.printf("Channel 2 update failed, error: %s\n", http2.errorToString(httpCode2).c_str());
+  }
+  http2.end();
+}
