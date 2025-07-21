@@ -1,4 +1,4 @@
-classdef TransformerDiagnosticApp3 < matlab.apps.AppBase
+classdef TransformerDiagnosticApp < matlab.apps.AppBase
     % Main application class for Transformer Diagnostic System
     
     properties (Access = public)
@@ -10,7 +10,6 @@ classdef TransformerDiagnosticApp3 < matlab.apps.AppBase
         TrainingAxes2           % Handle for second training axes
         SVM_Mean               double
         SVM_Std                double
-        
             
         % Data Tab components
         DataTab                 matlab.ui.container.Tab
@@ -42,7 +41,6 @@ classdef TransformerDiagnosticApp3 < matlab.apps.AppBase
         PerformanceAxes         matlab.ui.control.UIAxes
         FeatureImportanceAxes   matlab.ui.control.UIAxes
         AIDiagnosisTextArea     matlab.ui.control.TextArea
-       % ConfusionMatrixAxes      matlab.ui.control.UIAxes
       
         % Cloud Integration Tab components
         CloudTab                matlab.ui.container.Tab
@@ -80,7 +78,8 @@ classdef TransformerDiagnosticApp3 < matlab.apps.AppBase
     end
     
      methods (Access = private)
-       function openManualPredictor(app, ~, ~)
+
+    function openManualPredictor(app, ~, ~)
     % Check if model is trained
     modelType = app.ModelSelectionDropDown.Value;
     if ~isfield(app.TrainedModels, modelType)
@@ -88,78 +87,69 @@ classdef TransformerDiagnosticApp3 < matlab.apps.AppBase
         return;
     end
     
-    % Create input figure with adjusted size for additional gases
+    % Create input figure
     fig = uifigure('Name', 'Gas Concentration Input', ...
-                  'Position', [100 100 350 550], ... % Increased height
+                  'Position', [100 100 350 420], ...
                   'Color', [0.96 0.96 0.98]);
     movegui(fig, 'center');
     
-    % Default values for all gases (including CO2 and H2O)
-    defaultValues = [50 120 66 80 5 360 25 15 75 85]; % [H2 CH4 C2H6 C2H4 C2H2 CO CO2 H2O Temp Load]
+    % Default values
+    defaultValues = [50 120 66 80 5 360 75 85]; % [H2 CH4 C2H6 C2H4 C2H2 CO Temp Load]
     
-    % Gas data configuration - now includes all 8 gases
+    % Gas data configuration
     gases = {
         'H2',   'Hydrogen';
         'CH4',  'Methane';
         'C2H6', 'Ethane'; 
         'C2H4', 'Ethylene';
         'C2H2', 'Acetylene';
-        'CO',   'Carbon Monoxide';
-        'CO2',  'Carbon Dioxide';
-        'H2O',  'Water'
+        'CO',   'Carbon Monoxide'
     };
     
-    % Create input fields for all 8 gases
-    editFields = gobjects(8,1); % Now 8 fields for gases
-    for i = 1:8
+    % Create input fields
+    editFields = gobjects(6,1);
+    for i = 1:6
         uilabel(fig, ...
                'Text', sprintf('%s (%s):', gases{i,1}, gases{i,2}), ...
-               'Position', [20 500-35*i 120 22], ... % Adjusted vertical position
+               'Position', [20 350-35*i 120 22], ...
                'FontWeight', 'bold');
         
         editFields(i) = uieditfield(fig, 'numeric', ...
-                                  'Position', [150 500-35*i 150 25], ...
-                                  'Value', defaultValues(i));
-                                 % 'Limits', [0 1000], ...
-                                 % 'ValueDisplayFormat', '%.1f ppm');
+                                  'Position', [150 350-35*i 150 25], ...
+                                  'Value', defaultValues(i), ...
+                                  'Limits', [0 1000], ...
+                                  'ValueDisplayFormat', '%.1f ppm');
     end
     
-    % Temperature and Load (positioned below gases)
+    % Temperature and Load
     uilabel(fig, 'Text', 'Temp (°C):', ...
-           'Position', [20 500-35*9 120 22], ...
+           'Position', [20 350-35*7 120 22], ...
            'FontWeight', 'bold');
     
     tempField = uieditfield(fig, 'numeric', ...
-                          'Position', [150 500-35*9 150 25], ...
-                          'Value', defaultValues(9));
-                          %Limits', [0 200]);
+                          'Position', [150 350-35*7 150 25], ...
+                          'Value', defaultValues(7), ...
+                          'Limits', [0 200]);
     
     uilabel(fig, 'Text', 'Load (%):', ...
-           'Position', [20 500-35*10 120 22], ...
+           'Position', [20 350-35*8 120 22], ...
            'FontWeight', 'bold');
     
     loadField = uieditfield(fig, 'numeric', ...
-                          'Position', [150 500-35*10 150 25], ...
-                          'Value', defaultValues(10));
-                          %'Limits', [0 100]);
+                          'Position', [150 350-35*8 150 25], ...
+                          'Value', defaultValues(8), ...
+                          'Limits', [0 100]);
     
-    % Prediction button (still only uses original 6 gases for prediction)
+    % Prediction button
     uibutton(fig, 'push', ...
             'Text', 'PREDICT', ...
             'Position', [150 30 150 35], ...
-            'ButtonPushedFcn', @(btn,event) app.manualPredictCallback(fig, editFields(1:6), tempField, loadField), ...
+            'ButtonPushedFcn', @(btn,event) app.manualPredictCallback(fig, editFields, tempField, loadField), ...
             'BackgroundColor', [0.15 0.35 0.65], ...
             'FontColor', 'white');
-    
-    % Note about unused gases (optional)
-    uilabel(fig, 'Text', 'Note: Limits remove in prediction', ...
-           'Position', [20 10 310 20], ...
-           'FontSize', 9, ...
-           'FontAngle', 'italic', ...
-           'HorizontalAlignment', 'center');
 end
-
-     function manualPredictCallback(app, fig, gasFields, tempField, loadField)
+    
+  function manualPredictCallback(app, fig, gasFields, tempField, loadField)
     try
         % Validate inputs
         gasLimits = [0 1000; 0 500; 0 300; 0 400; 0 100; 0 1000]; % H2 to CO
@@ -169,68 +159,39 @@ end
                     gasFields(i).Tooltip, gasLimits(i,1), gasLimits(i,2));
             end
         end
-
-        % Prepare input data [H2, CH4, C2H6, C2H4, C2H2, CO, CO2, H2O, Temp, Load]
+        
+        % Prepare input data [H2, CH4, C2H6, C2H4, C2H2, Temp, Load]
         inputData = [
-            gasFields(1).Value, ... 
-            gasFields(2).Value, ... 
-            gasFields(3).Value, ... 
-            gasFields(4).Value, ... 
-            gasFields(5).Value, ... 
-            tempField.Value, ...
-            loadField.Value ...
+            gasFields(1).Value, ... % H2
+            gasFields(2).Value, ... % CH4
+            gasFields(3).Value, ... % C2H6
+            gasFields(4).Value, ... % C2H4
+            gasFields(5).Value, ... % C2H2
+            tempField.Value, ...    % Temp
+            loadField.Value ...     % Load
         ];
-
+        
         % Get prediction
-        [prediction, confidence, reportText] = app.predictFaultFromGases(inputData);
-
-        % Hardcoded values
-        CO   = 360;
-        CO2  = 25;
-        H2O  = 15;
-
-        % Add gas concentrations section
-        gasReport = sprintf([
-            'GAS CONCENTRATIONS:\n' ...
-            'H2:   %.1f ppm\n' ...
-            'CH4:  %.1f ppm\n' ...
-            'C2H6: %.1f ppm\n' ...
-            'C2H4: %.1f ppm\n' ...
-            'C2H2: %.1f ppm\n' ...
-            'CO:   %.1f ppm\n' ...
-            'CO2:  %.1f ppm\n' ...
-            'H2O:  %.1f ppm\n' ...
-            'Temp: %.1f °C\n' ...
-            'Load: %.1f %%\n\n'], ...
-            gasFields(1).Value, ...
-            gasFields(2).Value, ...
-            gasFields(3).Value, ...
-            gasFields(4).Value, ...
-            gasFields(5).Value, ...
-            CO, CO2, H2O, ...
-            tempField.Value, ...
-            loadField.Value);
-
-        % Combine full report
-        fullReport = sprintf('%s%s', gasReport, reportText);
-
+        [prediction, confidence, report] = app.predictFaultFromGases(inputData);
+        
         % Update UI
-        app.AIDiagnosisTextArea.Value = fullReport;
+        app.AIDiagnosisTextArea.Value = report;
         app.FaultTypeLabel.Text = sprintf('%s (%.1f%%)', prediction, confidence);
-
-        % Color setting
+        
+        % Set color based on fault type
         if contains(prediction, 'Normal')
             app.FaultTypeLabel.FontColor = [0 0.5 0]; % Green
         else
             app.FaultTypeLabel.FontColor = [0.8 0 0]; % Red
         end
-
+        
     catch ME
         app.AIDiagnosisTextArea.Value = sprintf('Prediction Error:\n%s', ME.message);
         app.FaultTypeLabel.Text = 'Prediction Failed';
         app.FaultTypeLabel.FontColor = 'red';
     end
-
+    
+    % Keep window open
     if isvalid(fig)
         uistack(fig, 'top');
     end
@@ -309,7 +270,7 @@ end
     report = [report sprintf('Predicted Fault: %s (%.1f%% confidence)\n', prediction, confidence)];
     
     % Gas concentrations
-    gases = {'H2','CH4','C2H6','C2H4','C2H2','CO','CO2','H2O'};
+    gases = {'H2','CH4','C2H6','C2H4','C2H2'};
     report = [report sprintf('\nGAS CONCENTRATIONS:\n')];
     for i = 1:5
         [normalRange, interpretation] = app.getGasInterpretation(gases{i}, inputData(i));
@@ -451,16 +412,9 @@ end
                 
                 % Validate required columns
                 requiredCols = {'h2','ch4','c2h6','c2h4','c2h2','temperature','load'};
-                optionalCols = {'co','co2','h2o'};
                 missingCols = setdiff(requiredCols, data.Properties.VariableNames);
                 if ~isempty(missingCols)
                     error('Missing required columns: %s', strjoin(missingCols, ', '));
-                end
-                  % Set missing optional gases 
-                for gas = optionalCols
-                    if ~ismember(gas{1}, data.Properties.VariableNames)
-                        data.(gas{1}) = nan(height(data), 1);
-                    end
                 end
                 
                 % Clean data - replace invalid values with median
@@ -695,195 +649,167 @@ end
             end
         end
         
-   
         function generateReport(app, ~, ~)
-    % Generate professional PDF report with all 8 gases displayed
-    app.updateStatus('Starting report generation...', [0 0.45 0.74]);
-    app.ReportPreviewArea.Value = 'Initializing report generation...';
-    drawnow;
+            % Generate professional PDF report with guaranteed PDF opening
+            app.updateStatus('Starting report generation...', [0 0.45 0.74]);
+            app.ReportPreviewArea.Value = 'Initializing report generation...';
+            drawnow;
 
-    try
-        %% === SETUP FIGURE ===
-        fig = figure('Visible', 'off', 'Units', 'inches', ...
-                     'Position', [0 0 8.5 11], 'Color', 'w', ...
-                     'PaperPositionMode', 'auto');
+            try
+                % Create figure with enhanced layout
+                fig = figure('Visible', 'off', 'Units', 'inches', ...
+                             'Position', [0 0 8.5 11], 'Color', 'w', ...
+                             'PaperPositionMode', 'auto');
 
-        %% === 1. HEADER ===
-        headerAx = axes(fig, 'Position', [0.1 0.94 0.8 0.06], 'Visible', 'off');
-        text(headerAx, 0.5, 0.7, 'TRANSFORMER DIAGNOSTIC REPORT', ...
-             'FontSize', 18, 'FontWeight', 'bold', ...
-             'HorizontalAlignment', 'center', 'Color', [0 0.45 0.74]);
-        line(headerAx, [0 1], [0.1 0.1], 'Color', [0 0.45 0.74], 'LineWidth', 2);
+                % ============ REPORT HEADER ============
+                headerAx = axes(fig, 'Position', [0.1 0.94 0.8 0.06], 'Visible', 'off');
+                text(headerAx, 0.5, 0.7, 'TRANSFORMER DIAGNOSTIC REPORT', ...
+                     'FontSize', 18, 'FontWeight', 'bold', 'HorizontalAlignment', 'center', ...
+                     'Color', [0 0.45 0.74]);
+                line(headerAx, [0 1], [0.1 0.1], 'Color', [0 0.45 0.74], 'LineWidth', 2);
 
-        %% === 2. SYSTEM STATUS ===
-        sectionAx = axes(fig, 'Position', [0.1 0.83 0.8 0.1], 'Visible', 'off');
-        text(sectionAx, 0, 0.9, '1. SYSTEM STATUS', ...
-             'FontSize', 14, 'FontWeight', 'bold', 'VerticalAlignment', 'top');
+                % ============ SYSTEM STATUS ============
+                sectionAx = axes(fig, 'Position', [0.1 0.83 0.8 0.1], 'Visible', 'off');
+                text(sectionAx, 0, 0.9, '1. SYSTEM STATUS', 'FontSize', 14, 'FontWeight', 'bold', 'VerticalAlignment', 'top');
 
-        cloudStatus = 'Offline';
-        if isprop(app, 'CloudConnected') && app.CloudConnected
-            cloudStatus = 'Connected';
-        end
+                cloudStatus = 'Offline';
+                if isprop(app, 'CloudConnected') && app.CloudConnected
+                    cloudStatus = 'Connected';
+                end
 
-        overviewText = {
-            sprintf('• Generated: %s', datestr(now, 'dd-mmm-yyyy HH:MM'));
-            sprintf('• Model Used: %s', app.ModelSelectionDropDown.Value);
-            sprintf('• Cloud Status: %s', cloudStatus)
-        };
-        text(sectionAx, 0, 0.5, overviewText, 'FontSize', 11, 'VerticalAlignment', 'top');
+                % Construct system overview text
+                overviewText = {
+                    sprintf('• Generated: %s', datestr(now, 'dd-mmm-yyyy HH:MM'));
+                    sprintf('• Model Used: %s', app.ModelSelectionDropDown.Value);
+                    sprintf('• Cloud Status: %s', cloudStatus)
+                };
+                text(sectionAx, 0, 0.5, overviewText, 'FontSize', 11, 'VerticalAlignment', 'top');
 
-        %% === 3. FAULT ANALYSIS ===
-        sectionAx = axes(fig, 'Position', [0.1 0.7 0.8 0.12], 'Visible', 'off');
-        text(sectionAx, 0, 0.8, '2. FAULT ANALYSIS', ...
-             'FontSize', 14, 'FontWeight', 'bold', 'VerticalAlignment', 'top');
+                % ============ FAULT ANALYSIS ============
+                sectionAx = axes(fig, 'Position', [0.1 0.7 0.8 0.12], 'Visible', 'off');
+                text(sectionAx, 0, 0.8, '2. FAULT ANALYSIS', 'FontSize', 14, 'FontWeight', 'bold', 'VerticalAlignment', 'top');
 
-        faultText = '• No faults detected';
-        if isprop(app, 'FaultTypeLabel') && ~isempty(app.FaultTypeLabel.Text)
-            faultText = ['• Detected: ' app.FaultTypeLabel.Text];
-        end
-        text(sectionAx, 0, 0.5, faultText, 'FontSize', 11, 'VerticalAlignment', 'top');
+                % Fixed fault text concatenation
+                faultText = '• No faults detected';
+                if isprop(app, 'FaultTypeLabel') && ~isempty(app.FaultTypeLabel.Text)
+                    faultText = ['• Detected: ' app.FaultTypeLabel.Text];
+                end
+                text(sectionAx, 0, 0.5, faultText, 'FontSize', 11, 'VerticalAlignment', 'top');
 
-        %% === 4. GAS ANALYSIS ===
-        sectionAx = axes(fig, 'Position', [0.1 0.49 0.8 0.2], 'Visible', 'off');
-        text(sectionAx, 0, 0.9, '3. GAS ANALYSIS (ppm)', ...
-             'FontSize', 14, 'FontWeight', 'bold', 'VerticalAlignment', 'top');
+                % ============ GAS ANALYSIS ============
+                sectionAx = axes(fig, 'Position', [0.1 0.49 0.8 0.2], 'Visible', 'off');
+                text(sectionAx, 0, 0.9, '3. GAS ANALYSIS (ppm)', 'FontSize', 14, 'FontWeight', 'bold', 'VerticalAlignment', 'top');
 
-        if ~isempty(app.TransformerData)
-            gases = {
-                'H₂',   'Hydrogen';
-                'CH₄',  'Methane';
-                'C₂H₆', 'Ethane';
-                'C₂H₄', 'Ethylene';
-                'C₂H₂', 'Acetylene';
-                'CO',   'Carbon Monoxide';
-                'CO₂',  'Carbon Dioxide';
-                'H₂O',  'Water'
-            };
-            vars = {'h2','ch4','c2h6','c2h4','c2h2','co','co2','h2o'};
-            validVars = vars(ismember(vars, app.TransformerData.Properties.VariableNames));
-            gasText = {};
+                if ~isempty(app.TransformerData)
+                    gases = {'H₂','CH₄','C₂H₆','C₂H₄','C₂H₂'};
+                    vars = {'h2','ch4','c2h6','c2h4','c2h2'};
+                    validVars = vars(ismember(vars, app.TransformerData.Properties.VariableNames));
 
-            for i = 1:length(vars)
-                gasName = gases{i,1};
-                gasLabel = gases{i,2};
-
-                if ismember(vars{i}, validVars)
-                    val = app.TransformerData.(vars{i})(end);
-                    gasText{end+1} = sprintf('%-6s: %6.2f ppm', gasName, val);
+                    gasText = {};
+                    for i = 1:length(validVars)
+                        gas = gases{strcmp(vars, validVars{i})};
+                        value = app.TransformerData.(validVars{i})(end);
+                        gasText{end+1} = sprintf('%-6s: %6.2f', gas, value);
+                    end
+                    text(sectionAx, 0, 0.5, gasText, 'FontSize', 11, 'FontName', 'FixedWidth', 'VerticalAlignment', 'top');
                 else
-                    gasText{end+1} = sprintf('%-6s: %6s ppm', gasName, 'N/A');
+                    text(sectionAx, 0, 0.5, 'No gas data available', 'FontSize', 11, 'VerticalAlignment', 'top');
                 end
-            end
 
-            gasText{end+1} = '';
-            gasText{end+1} = 'Note: Analysis uses H₂, CH₄, C₂H₆, C₂H₄, C₂H₂, CO';
+                % ============ AI DIAGNOSIS ============
+                sectionAx = axes(fig, 'Position', [0.1 0.3 0.8 0.2], 'Visible', 'off');
+                text(sectionAx, 0, 0.8, '4. AI DIAGNOSIS', 'FontSize', 14, 'FontWeight', 'bold', 'VerticalAlignment', 'top');
 
-            text(sectionAx, 0, 0.5, gasText, ...
-                 'FontSize', 11, 'FontName', 'FixedWidth', 'VerticalAlignment', 'top');
-        else
-            text(sectionAx, 0, 0.5, 'No gas data available', 'FontSize', 11, 'VerticalAlignment', 'top');
-        end
-
-        %% === 5. AI DIAGNOSIS ===
-        sectionAx = axes(fig, 'Position', [0.1 0.3 0.8 0.2], 'Visible', 'off');
-        text(sectionAx, 0, 0.8, '4. AI DIAGNOSIS', ...
-             'FontSize', 14, 'FontWeight', 'bold', 'VerticalAlignment', 'top');
-
-        if ~isempty(app.AIDiagnosisTextArea.Value)
-            diagnosisText = strrep(app.AIDiagnosisTextArea.Value, '\n', newline);
-            text(sectionAx, 0, 0.5, diagnosisText, 'FontSize', 11, 'VerticalAlignment', 'top');
-        else
-            text(sectionAx, 0, 0.5, 'No AI diagnosis available', 'FontSize', 11, 'VerticalAlignment', 'top');
-        end
-
-        %% === 6. MODEL PERFORMANCE ===
-        sectionAx = axes(fig, 'Position', [0.1 0.15 0.8 0.15], 'Visible', 'off');
-        text(sectionAx, 0, 0.9, '5. MODEL PERFORMANCE', ...
-             'FontSize', 14, 'FontWeight', 'bold', 'VerticalAlignment', 'top');
-
-        modelKey = regexprep(app.ModelSelectionDropDown.Value, '\s*\(Built-in\)', '');
-        if isfield(app.TrainedModels, modelKey)
-            model = app.TrainedModels.(modelKey);
-            perfText = {
-                sprintf('Model Type: %s', app.ModelSelectionDropDown.Value);
-                sprintf('Validation Accuracy: %.1f%%', model.Accuracy * 100);
-                sprintf('Training Date: %s', datestr(now, 'dd-mmm-yyyy'))
-            };
-            text(sectionAx, 0, 0.5, perfText, 'FontSize', 11, 'VerticalAlignment', 'top');
-        else
-            text(sectionAx, 0, 0.5, 'No trained model available', 'FontSize', 11, 'VerticalAlignment', 'top');
-        end
-
-        %% === FOOTER ===
-        footerAx = axes(fig, 'Position', [0.1 0.02 0.8 0.05], 'Visible', 'off');
-        text(footerAx, 0.5, 0.5, 'Confidential - Transformer Diagnostics System', ...
-             'FontSize', 9, 'HorizontalAlignment', 'center', 'Color', [0.5 0.5 0.5]);
-
-        %% === EXPORT TO PDF ===
-        timestamp = datestr(now, 'yyyymmdd_HHMMSS');
-        reportFile = fullfile(pwd, ['Transformer_Report_' timestamp '.pdf']);
-
-        maxAttempts = 3;
-        for attempt = 1:maxAttempts
-            try
-                exportgraphics(fig, reportFile, 'ContentType', 'vector', 'Resolution', 300);
-                break;
-            catch
-                if attempt == maxAttempts
-                    rethrow(lasterror);
+                if ~isempty(app.AIDiagnosisTextArea.Value)
+                    diagnosisText = strrep(app.AIDiagnosisTextArea.Value, '\n', newline);
+                    text(sectionAx, 0, 0.5, diagnosisText, 'FontSize', 11, 'VerticalAlignment', 'top');
+                else
+                    text(sectionAx, 0, 0.5, 'No AI diagnosis available', 'FontSize', 11, 'VerticalAlignment', 'top');
                 end
-                pause(1);
+
+                % ============ FOOTER ============
+                footerAx = axes(fig, 'Position', [0.1 0.02 0.8 0.05], 'Visible', 'off');
+                text(footerAx, 0.5, 0.5, 'Confidential - Transformer Diagnostics System', ...
+                     'FontSize', 9, 'HorizontalAlignment', 'center', 'Color', [0.5 0.5 0.5]);
+
+                % ============ RELIABLE PDF GENERATION ============
+                timestamp = datestr(now, 'yyyymmdd_HHMMSS');
+                reportFile = fullfile(pwd, ['Transformer_Report_' timestamp '.pdf']);
+
+                % Generate PDF with retry logic
+                maxAttempts = 3;
+                for attempt = 1:maxAttempts
+                    try
+                        exportgraphics(fig, reportFile, 'ContentType', 'vector', 'Resolution', 300);
+                        break;
+                    catch
+                        if attempt == maxAttempts
+                            rethrow(lasterror);
+                        end
+                        pause(1); % Wait before retrying
+                    end
+                end
+                close(fig);
+
+                % ============ GUARANTEED BROWSER OPENING ============
+                app.updateStatus('Report generated - opening...', 'green');
+                app.ReportPreviewArea.Value = sprintf(...
+                    ['REPORT GENERATION SUCCESSFUL\n\n'...
+                     'File: Transformer_Report_%s.pdf\n'...
+                     'Location: %s\n\n'...
+                     'The report should open automatically in your browser.'], ...
+                    timestamp, pwd);
+
+                % Robust PDF opening with multiple methods
+                try
+                    % Method 1: Direct system command
+                    if ispc
+                        system(['start "" "' reportFile '"']);
+                    elseif ismac
+                        system(['open "' reportFile '"']);
+                    else
+                        system(['xdg-open "' reportFile '"']);
+                    end
+
+                    % Verify file opened
+                    pause(2); % Give time to open
+                    if ~exist(reportFile, 'file')
+                        error('File not found after generation');
+                    end
+
+                catch
+                    try
+                        % Method 2: MATLAB's web command
+                        web(reportFile, '-browser');
+                    catch
+                        % Method 3: User instruction
+                        app.ReportPreviewArea.Value = [app.ReportPreviewArea.Value ...
+                            '\n\nCould not open automatically. Please manually open:\n' reportFile];
+                    end
+                end
+
+            catch ME
+                % Clean up figure if it exists
+                if exist('fig', 'var') && ishandle(fig)
+                    close(fig);
+                end
+
+                % Detailed error display
+                errReport = sprintf(...
+                    ['REPORT GENERATION FAILED\n\n'...
+                     'Error: %s\n\n'...
+                     'Location: %s\n'...
+                     'Line: %d\n\n'...
+                     'Immediate actions:\n'...
+                     '1. Check disk space\n'...
+                     '2. Verify PDF viewer is installed\n'...
+                     '3. Contact support if persists'], ...
+                    ME.message, ME.stack(1).name, ME.stack(1).line);
+
+                app.updateStatus('Report generation failed', 'red');
+                app.ReportPreviewArea.Value = errReport;
             end
         end
-        close(fig);
-
-        %% === OPEN PDF ===
-        app.updateStatus('Report generated - opening...', 'green');
-        app.ReportPreviewArea.Value = sprintf(...
-            ['REPORT GENERATION SUCCESSFUL\n\n' ...
-             'File: Transformer_Report_%s.pdf\n' ...
-             'Location: %s\n\n' ...
-             'The report should open automatically in your browser.'], ...
-             timestamp, pwd);
-
-        try
-            if ispc
-                system(['start "" "' reportFile '"']);
-            elseif ismac
-                system(['open "' reportFile '"']);
-            else
-                system(['xdg-open "' reportFile '"']);
-            end
-        catch
-            try
-                web(reportFile, '-browser');
-            catch
-                app.ReportPreviewArea.Value = sprintf('%s\n\nManual open required:\n%s', ...
-                    app.ReportPreviewArea.Value, reportFile);
-            end
-        end
-
-    catch ME
-        if exist('fig', 'var') && ishandle(fig)
-            close(fig);
-        end
-
-        errReport = sprintf(...
-            ['REPORT GENERATION FAILED\n\n' ...
-             'Error: %s\n\n' ...
-             'Location: %s\n' ...
-             'Line: %d\n\n' ...
-             'Actions:\n' ...
-             '1. Check disk space\n' ...
-             '2. Verify PDF viewer\n' ...
-             '3. Contact support'], ...
-             ME.message, ME.stack(1).name, ME.stack(1).line);
-
-        app.updateStatus('Report generation failed', 'red');
-        app.ReportPreviewArea.Value = errReport;
-    end
-end
-
 
         function updateDuvalTriangle(app)
             % Update Duval triangle visualization
@@ -994,219 +920,167 @@ end
         end
         
         function updateCorrelationHeatmap(app)
-                data = app.TransformerData;
-                
-                if isempty(data)
-                    cla(app.CorrelationHeatmapAxes);
-                    title(app.CorrelationHeatmapAxes, 'No data available');
-                    return;
-                end
-                
-                % All possible variables we might want to show
-                allVars = {'h2','ch4','c2h6','c2h4','c2h2','co','co2','h2o','temperature','load'};
-                prettyNames = {'H₂','CH₄','C₂H₆','C₂H₄','C₂H₂','CO','CO₂','H₂O','Temp','Load'};
-                
-                % Find which variables actually exist in the data
-                availableVars = allVars(ismember(allVars, data.Properties.VariableNames));
-                displayNames = prettyNames(ismember(allVars, availableVars));
-                
-                if length(availableVars) < 2
-                    cla(app.CorrelationHeatmapAxes);
-                    title(app.CorrelationHeatmapAxes, 'Need at least 2 variables');
-                    return;
-                end
-                
-                % Extract data and handle missing values
-                corrData = data(:, availableVars);
-                dataArray = table2array(corrData);
-                
-                % Check for constant columns (will cause NaN in correlation)
-                constCols = var(dataArray, 0, 1) == 0;
-                if any(constCols)
-                    % Remove constant columns
-                    dataArray(:, constCols) = [];
-                    availableVars(constCols) = [];
-                    displayNames(constCols) = [];
-                    
-                    if length(availableVars) < 2
-                        cla(app.CorrelationHeatmapAxes);
-                        title(app.CorrelationHeatmapAxes, 'Not enough varying variables');
-                        return;
-                    end
-                end
-                
-                % Calculate correlation with pairwise complete observations
-                corrMatrix = corr(dataArray, 'Rows', 'pairwise');
-                
-                % Handle any remaining NaN values (if any pairs have no complete observations)
-                if any(isnan(corrMatrix(:)))
-                    % Replace NaN with 0 and indicate missing correlations
-                    corrMatrix(isnan(corrMatrix)) = 0;
-                    warning('Some correlations could not be computed (insufficient data)');
-                end
-                
-                % Create heatmap
-                cla(app.CorrelationHeatmapAxes);
-                imagesc(app.CorrelationHeatmapAxes, corrMatrix);
-                colorbar(app.CorrelationHeatmapAxes);
-                
-                % Add correlation values (only if not NaN)
-                [n, m] = size(corrMatrix);
-               for i = 1:n
-                            for j = 1:m
-                                text(app.CorrelationHeatmapAxes, j, i, sprintf('%.2f', corrMatrix(i,j)),...
-                                    'HorizontalAlignment', 'center', 'Color', 'w');
-                         end
-                     end
-                
-                % Configure axes
-                app.CorrelationHeatmapAxes.XTick = 1:length(availableVars);
-                app.CorrelationHeatmapAxes.XTickLabel = displayNames;
-                app.CorrelationHeatmapAxes.XTickLabelRotation = 45;
-                app.CorrelationHeatmapAxes.YTick = 1:length(availableVars);
-                app.CorrelationHeatmapAxes.YTickLabel = displayNames;
-                
-                title(app.CorrelationHeatmapAxes, 'Feature Correlation Matrix');
-                clim(app.CorrelationHeatmapAxes, [-1 1]); % Fix color scale from -1 to 1
-            end
-                    
-        function updateVisualizations(app)
-                % Update all visualizations with current data
-                if isempty(app.TransformerData)
-                    return;
-                end
-                
-                data = app.TransformerData;
-                
-                % Time series plot (unchanged)
-                cla(app.TimeSeriesAxes);
-                if ismember('temperature', data.Properties.VariableNames)
-                    plot(app.TimeSeriesAxes, data.temperature, 'b-', 'LineWidth', 1.5);
-                    hold(app.TimeSeriesAxes, 'on');
-                    plot(app.TimeSeriesAxes, data.load, 'r-', 'LineWidth', 1.5);
-                    hold(app.TimeSeriesAxes, 'off');
-                    title(app.TimeSeriesAxes, 'Temperature and Load Over Time');
-                    legend(app.TimeSeriesAxes, {'Temperature', 'Load'});
-                    grid(app.TimeSeriesAxes, 'on');
-                end
-                
-               cla(app.GasConcentrationAxes);
-                    % Define all gases we want to display
-                    gases = {
-                        'h2',   'H₂',   [0 0.4470 0.7410]; % Hydrogen
-                        'ch4',  'CH₄',  [0.8500 0.3250 0.0980]; % Methane
-                        'c2h6', 'C₂H₆', [0.9290 0.6940 0.1250]; % Ethane
-                        'c2h4', 'C₂H₄', [0.4940 0.1840 0.5560]; % Ethylene
-                        'c2h2', 'C₂H₂', [0.4660 0.6740 0.1880]; % Acetylene
-                        'co',   'CO',   [0.3010 0.7450 0.9330]; % Carbon Monoxide
-                        'co2',  'CO₂',  [0.6350 0.0780 0.1840]; % Carbon Dioxide
-                        'h2o',  'H₂O',  [0.25 0.25 0.25] % Water
-                    };
-                    
-                    % Plot each gas that exists in data
-                    legendEntries = {};
-                    for i = 1:size(gases,1)
-                        gas = gases{i,1};
-                        if ismember(gas, data.Properties.VariableNames)
-                            plot(app.GasConcentrationAxes, data.(gas), 'Color', gases{i,3}, 'LineWidth', 1.5);
-                            hold(app.GasConcentrationAxes, 'on');
-                            legendEntries{end+1} = gases{i,2};
-                        end
-                    end
-                    hold(app.GasConcentrationAxes, 'off');
-                    
-                    title(app.GasConcentrationAxes, 'Dissolved Gas Concentrations');
-                    legend(app.GasConcentrationAxes, legendEntries, 'Location', 'northeastoutside');
-                    ylabel(app.GasConcentrationAxes, 'Concentration (ppm)');
-                    xlabel(app.GasConcentrationAxes, 'Sample Index');
-                    grid(app.GasConcentrationAxes, 'on');
-                    
-                    % Correlation heatmap
-                    app.updateCorrelationHeatmap();
-                    
-                    % Duval triangle (unchanged)
-                    app.updateDuvalTriangle();
-                end
-
-
-   function trainModel(app, ~, ~)
-    % Train selected AI model using MATLAB built-in tools
-    modelType = app.ModelSelectionDropDown.Value;
-    data = app.TransformerData;
-    
-    % Check if data is available
-    if isempty(data)
-        app.updateStatus('No data available for training', 'red');
-        return;
-    end
-    
-    app.updateStatus(['Training ' modelType ' model...'], 'yellow');
-    app.ProgressBar.Value = 20;
-    
-    try
-        % Prepare data - extract relevant features (still using original 7 features)
-        X = table2array(data(:, {'h2','ch4','c2h6','c2h4','c2h2','temperature','load'}));
-        
-        % Check for invalid values
-        if any(~isfinite(X(:)))
-            error('Data contains NaN or Inf values. Please clean your data first.');
-        end
-        
-        % Create synthetic fault labels
-        y = ones(size(X,1),1); % Default to normal operation
-        faultClasses = {'Normal', 'PD', 'T1', 'T2', 'D1', 'D2'};
-        
-        % Label generation logic based on gas ratios
-        for i = 1:size(X,1)
-            sample = X(i,:);
-            total = sum(sample([1,2,5])); % H2 + CH4 + C2H2
+            % Update correlation heatmap visualization
+            data = app.TransformerData;
             
-            if total > 0
-                p_H2 = (sample(1)/total)*100;
-                p_CH4 = (sample(2)/total)*100;
-                p_C2H2 = (sample(5)/total)*100;
-                
-                if p_C2H2 > 23
-                    y(i) = 5 + (p_CH4 >= 23); % D1 or D2
-                elseif p_CH4 > 50
-                    y(i) = 3 + (p_H2 < 20); % T1 or T2
-                elseif p_H2 > 50
-                    y(i) = 2; % PD
+            if isempty(data)
+                return;
+            end
+            
+            % Select numerical features for correlation
+            numericalVars = {'h2','ch4','c2h6','c2h4','c2h2','temperature','load'};
+            numericalVars = numericalVars(ismember(numericalVars, data.Properties.VariableNames));
+            
+            if length(numericalVars) < 2
+                return;
+            end
+            
+            corrData = data(:, numericalVars);
+            corrMatrix = corr(table2array(corrData), 'Rows', 'complete');
+            
+            cla(app.CorrelationHeatmapAxes);
+            imagesc(app.CorrelationHeatmapAxes, corrMatrix);
+            colorbar(app.CorrelationHeatmapAxes);
+            
+            % Add correlation values
+            [n, m] = size(corrMatrix);
+            for i = 1:n
+                for j = 1:m
+                    text(app.CorrelationHeatmapAxes, j, i, sprintf('%.2f', corrMatrix(i,j)),...
+                        'HorizontalAlignment', 'center', 'Color', 'w');
                 end
             end
+            
+            % Set axis labels
+            app.CorrelationHeatmapAxes.XTick = 1:length(numericalVars);
+            app.CorrelationHeatmapAxes.XTickLabel = numericalVars;
+            app.CorrelationHeatmapAxes.XTickLabelRotation = 45;
+            app.CorrelationHeatmapAxes.YTick = 1:length(numericalVars);
+            app.CorrelationHeatmapAxes.YTickLabel = numericalVars;
+            
+            title(app.CorrelationHeatmapAxes, 'Feature Correlation Matrix');
         end
         
-        % Convert to categorical
-        y_categorical = categorical(y, 1:6, faultClasses);
+        function updateVisualizations(app)
+            % Update all visualizations with current data
+            if isempty(app.TransformerData)
+                return;
+            end
+            
+            data = app.TransformerData;
+            
+            % Time series plot
+            cla(app.TimeSeriesAxes);
+            if ismember('temperature', data.Properties.VariableNames)
+                plot(app.TimeSeriesAxes, data.temperature, 'b-', 'LineWidth', 1.5);
+                hold(app.TimeSeriesAxes, 'on');
+                plot(app.TimeSeriesAxes, data.load, 'r-', 'LineWidth', 1.5);
+                hold(app.TimeSeriesAxes, 'off');
+                title(app.TimeSeriesAxes, 'Temperature and Load Over Time');
+                legend(app.TimeSeriesAxes, {'Temperature', 'Load'});
+                grid(app.TimeSeriesAxes, 'on');
+            end
+            
+            % Gas concentrations
+            cla(app.GasConcentrationAxes);
+            gases = {'h2','ch4','c2h6','c2h4','c2h2'};
+            colors = lines(length(gases));
+            for i = 1:length(gases)
+                if ismember(gases{i}, data.Properties.VariableNames)
+                    plot(app.GasConcentrationAxes, data.(gases{i}), 'Color', colors(i,:), 'LineWidth', 1.5);
+                    hold(app.GasConcentrationAxes, 'on');
+                end
+            end
+            hold(app.GasConcentrationAxes, 'off');
+            title(app.GasConcentrationAxes, 'Dissolved Gas Concentrations');
+            legend(app.GasConcentrationAxes, gases);
+            grid(app.GasConcentrationAxes, 'on');
+            
+            % Correlation heatmap
+            app.updateCorrelationHeatmap();
+            
+            % Duval triangle
+            app.updateDuvalTriangle();
+        end
+      
+        function trainModel(app, ~, ~)
+        % Train selected AI model using MATLAB built-in tools
+        modelType = app.ModelSelectionDropDown.Value;
+        data = app.TransformerData;
         
-        % Split data into training and validation
-        cv = cvpartition(y_categorical, 'HoldOut', 0.2);
-        XTrain = X(cv.training,:);
-        yTrain = y_categorical(cv.training);
-        XVal = X(cv.test,:);
-        yVal = y_categorical(cv.test);
-        
-        % Initialize training progress tracking
-        app.TrainingProgress = struct(...
-            'Epoch', [], ...
-            'TrainingAccuracy', [], ...
-            'ValidationAccuracy', [], ...
-            'TrainingLoss', [], ...
-            'ValidationLoss', []);
-        
-        % Initialize model storage if needed
-        if ~isfield(app, 'TrainedModels') || isempty(app.TrainedModels)
-            app.TrainedModels = struct();
+        % Check if data is available
+        if isempty(data)
+            app.updateStatus('No data available for training', 'red');
+            return;
         end
         
-        % Clean up any existing training figure
-        if isfield(app, 'TrainingFigure') && isvalid(app.TrainingFigure)
-            close(app.TrainingFigure);
-        end
+        app.updateStatus(['Training ' modelType ' model...'], 'yellow');
+        app.ProgressBar.Value = 20;
         
-        % Model-specific training
-        switch modelType
-                        case 'LSTM'
+        try
+            % Prepare data - extract relevant features
+            X = table2array(data(:, {'h2','ch4','c2h6','c2h4','c2h2','temperature','load'}));
+            
+            % Check for invalid values
+            if any(~isfinite(X(:)))
+                error('Data contains NaN or Inf values. Please clean your data first.');
+            end
+            
+            % Create synthetic fault labels
+            y = ones(size(X,1),1); % Default to normal operation
+            faultClasses = {'Normal', 'PD', 'T1', 'T2', 'D1', 'D2'};
+            
+            % Label generation logic based on gas ratios
+            for i = 1:size(X,1)
+                sample = X(i,:);
+                total = sum(sample([1,2,5])); % H2 + CH4 + C2H2
+                
+                if total > 0
+                    p_H2 = (sample(1)/total)*100;
+                    p_CH4 = (sample(2)/total)*100;
+                    p_C2H2 = (sample(5)/total)*100;
+                    
+                    if p_C2H2 > 23
+                        y(i) = 5 + (p_CH4 >= 23); % D1 or D2
+                    elseif p_CH4 > 50
+                        y(i) = 3 + (p_H2 < 20); % T1 or T2
+                    elseif p_H2 > 50
+                        y(i) = 2; % PD
+                    end
+                end
+            end
+            
+            % Convert to categorical
+            y_categorical = categorical(y, 1:6, faultClasses);
+            
+            % Split data into training and validation
+            cv = cvpartition(y_categorical, 'HoldOut', 0.2);
+            XTrain = X(cv.training,:);
+            yTrain = y_categorical(cv.training);
+            XVal = X(cv.test,:);
+            yVal = y_categorical(cv.test);
+            
+            % Initialize training progress tracking
+            app.TrainingProgress = struct(...
+                'Epoch', [], ...
+                'TrainingAccuracy', [], ...
+                'ValidationAccuracy', [], ...
+                'TrainingLoss', [], ...
+                'ValidationLoss', []);
+            
+            % Initialize model storage if needed
+            if ~isfield(app, 'TrainedModels') || isempty(app.TrainedModels)
+                app.TrainedModels = struct();
+            end
+            
+            % Clean up any existing training figure
+            if isfield(app, 'TrainingFigure') && isvalid(app.TrainingFigure)
+                close(app.TrainingFigure);
+            end
+            
+            % Model-specific training
+            switch modelType
+              case 'LSTM'
                     % Normalize data to [0,1] range
                     [XTrainNorm, normParams] = mapminmax(XTrain', 0, 1);
                     XTrainNorm = XTrainNorm'; % XTrainNorm is [numObservations x numFeatures] (e.g., 100 x 7)
@@ -1262,165 +1136,129 @@ end
                         'net', net, ...
                         'normParams', normParams, ...
                         'Accuracy', sum(classify(net, XValCell) == yVal)/numel(yVal), ...
-                        'FeatureImportance', featureImp);
-                   try
-                        % Ensure predictions and true labels are categorical
-                        trueLabels = categorical(yVal(:)); % Convert yVal to categorical column vector
-                        predLabels = categorical(classify(net, XValCell), categories(trueLabels)); % Ensure same categories
-                        
-                        % Calculate accuracy
-                        accuracy = sum(predLabels == trueLabels) / numel(trueLabels) * 100;
+                        'FeatureImportance', featureImp);      
+                case 'SVM'
+                    % Standardize data (zero mean, unit variance)
+                    app.SVM_Mean = mean(XTrain, 1);
+                    app.SVM_Std = std(XTrain, 0, 1);
                     
-                        % Create confusion matrix with accuracy displayed in the title
-                        figure('Name', 'LSTM Confusion Matrix', 'NumberTitle', 'off');
-                        confusionchart(trueLabels, predLabels, ...
-                            'Title', sprintf('LSTM Confusion Matrix (Accuracy: %.2f%%)', accuracy), ...
-                            'RowSummary', 'row-normalized', ...
-                            'ColumnSummary', 'column-normalized');
+                    % Handle any constant features (zero std)
+                    app.SVM_Std(app.SVM_Std == 0) = 1;
                     
-                    catch ME
-                        warning('Failed to display confusion matrix: %s', ME().message);
-                        disp('--- Debug Info ---');
-                        disp('Unique true labels:'); disp(unique(yVal));
-                        disp('Unique predicted labels:'); 
-                        try
-                            disp(unique(classify(net, XValCell)));
-                        catch innerME
-                            warning('Failed to classify validation data: %s', innerME().message);
-                        end
+                    % Apply standardization
+                    XTrainStd = (XTrain - app.SVM_Mean) ./ app.SVM_Std;
+                    XValStd = (XVal - app.SVM_Mean) ./ app.SVM_Std;
+                    
+                    % Configure SVM with RBF kernel
+                    svmTemplate = templateSVM(...
+                        'KernelFunction', 'rbf', ...
+                        'Standardize', false, ... % We standardize manually
+                        'KernelScale', 'auto', ...
+                        'BoxConstraint', 1);
+                    
+                    % Train multiclass SVM
+                    model = fitcecoc(...
+                        XTrainStd, yTrain, ...
+                        'Learners', svmTemplate, ...
+                        'Coding', 'onevsone', ...
+                        'FitPosterior', true);
+                    
+                    % Calculate feature importance via permutation
+                    featureImp = zeros(1, size(XTrain, 2));
+                    baselineAcc = sum(predict(model, XTrainStd) == yTrain)/numel(yTrain);
+                    
+                    for i = 1:size(XTrain, 2)
+                        XPerm = XTrainStd;
+                        XPerm(:,i) = XPerm(randperm(size(XPerm,1)),i);
+                        permAcc = sum(predict(model, XPerm) == yTrain)/numel(yTrain);
+                        featureImp(i) = baselineAcc - permAcc;
                     end
-                
-            case 'SVM'
-                % Standardize data (zero mean, unit variance)
-                app.SVM_Mean = mean(XTrain, 1);
-                app.SVM_Std = std(XTrain, 0, 1);
-                app.SVM_Std(app.SVM_Std == 0) = 1; % Handle constant features
-                
-                % Apply standardization
-                XTrainStd = (XTrain - app.SVM_Mean) ./ app.SVM_Std;
-                XValStd = (XVal - app.SVM_Mean) ./ app.SVM_Std;
-                
-                % Configure SVM with RBF kernel
-                svmTemplate = templateSVM(...
-                    'KernelFunction', 'rbf', ...
-                    'Standardize', false, ...
-                    'KernelScale', 'auto', ...
-                    'BoxConstraint', 1);
-                
-                % Train multiclass SVM
-                model = fitcecoc(...
-                    XTrainStd, yTrain, ...
-                    'Learners', svmTemplate, ...
-                    'Coding', 'onevsone', ...
-                    'FitPosterior', true);
-                
-                % Calculate feature importance via permutation
-                featureImp = zeros(1, size(XTrain, 2));
-                baselineAcc = sum(predict(model, XTrainStd) == yTrain)/numel(yTrain);
-                
-                for i = 1:size(XTrain, 2)
-                    XPerm = XTrainStd;
-                    XPerm(:,i) = XPerm(randperm(size(XPerm,1)),i);
-                    permAcc = sum(predict(model, XPerm) == yTrain)/numel(yTrain);
-                    featureImp(i) = baselineAcc - permAcc;
-                end
-                
-                % Normalize feature importance
-                featureImp = featureImp ./ sum(featureImp);
-                
-                % Make predictions
-                YPredVal = predict(model, XValStd);
-                
-                % Store trained model
-                app.TrainedModels.SVM = struct(...
-                    'model', model, ...
-                    'Accuracy', sum(YPredVal == yVal)/numel(yVal), ...
-                    'FeatureImportance', featureImp);
-                
-                % Show confusion matrix
-                app.showConfusionMatrixInNewFigure(yVal, YPredVal, 'SVM');
-                
-            case 'CNN'
-                % Normalize data to [0,1] range
-                XTrainNorm = (XTrain - min(XTrain)) ./ (max(XTrain) - min(XTrain));
-                XValNorm = (XVal - min(XTrain)) ./ (max(XTrain) - min(XTrain));
-                
-                % Reshape for CNN [1, features, samples, 1]
-                XTrainCNN = permute(reshape(XTrainNorm', [1, size(XTrainNorm,2), size(XTrainNorm,1), 1]), [1 2 4 3]);
-                XValCNN = permute(reshape(XValNorm', [1, size(XValNorm,2), size(XValNorm,1), 1]), [1 2 4 3]);
-                
-                % Define CNN architecture
-                layers = [
-                    imageInputLayer([1 size(XTrain,2) 1])
-                    convolution2dLayer([1 3], 32, 'Padding', 'same')
-                    batchNormalizationLayer()
-                    reluLayer()
-                    maxPooling2dLayer([1 2], 'Stride', [1 1])
-                    convolution2dLayer([1 3], 64, 'Padding', 'same')
-                    batchNormalizationLayer()
-                    reluLayer()
-                    fullyConnectedLayer(64)
-                    reluLayer()
-                    dropoutLayer(0.5)
-                    fullyConnectedLayer(6)
-                    softmaxLayer()
-                    classificationLayer];
-                
-                % Training options
-                options = trainingOptions('adam', ...
-                    'MaxEpochs', 30, ...
-                    'MiniBatchSize', 32, ...
-                    'ValidationData', {XValCNN, yVal}, ...
-                    'Plots', 'training-progress');
-                
-                % Train model
-                net = trainNetwork(XTrainCNN, yTrain, layers, options);
-                
-                % Calculate feature importance
-                featureImp = app.calculateCNNFeatureImportance(net, XTrainCNN, yTrain);
-                
-                % Make predictions
-                YPredVal = classify(net, XValCNN);
-                
-                % Store trained model
-                app.TrainedModels.CNN = struct(...
-                    'net', net, ...
-                    'min', min(XTrain), ...
-                    'max', max(XTrain), ...
-                    'Accuracy', sum(YPredVal == yVal)/numel(yVal), ...
-                    'FeatureImportance', featureImp);
-                
-                % Show confusion matrix
-                app.showConfusionMatrixInNewFigure(yVal, YPredVal, 'CNN');
-        end
-        
-        % Update UI components
-        app.plotModelPerformance();
-        app.plotFeatureImportance();
-        
-        % Enable prediction buttons
-        modelField = regexprep(modelType, '\s*\(Built-in\)', '');
-        accuracy = app.TrainedModels.(modelField).Accuracy;
-        app.ProgressBar.Value = 100;
-        app.updateStatus([modelType ' trained (Accuracy: ' sprintf('%.1f%%', accuracy*100) ')'], 'green');
-        app.PredictButton.Enable = 'on';
-        app.GenerateReportButton.Enable = 'on';
-        app.ManualPredictButton.Enable = 'on';
-        
-    catch ME
-        % Error handling
-        app.ProgressBar.Value = 0;
-        app.updateStatus(['Training error: ' ME.message], 'red');
-        uialert(app.UIFigure, ME.message, 'Training Error');
-        
-        % Clean up training figure if it exists
-        if isfield(app, 'TrainingFigure') && isvalid(app.TrainingFigure)
-            close(app.TrainingFigure);
+                    
+                    % Normalize feature importance
+                    featureImp = featureImp ./ sum(featureImp);
+                    
+                    % Store trained model
+                    app.TrainedModels.SVM = struct(...
+                        'model', model, ...
+                        'Accuracy', sum(predict(model, XValStd) == yVal)/numel(yVal), ...
+                        'FeatureImportance', featureImp);
+                    
+                case 'CNN'
+                    % Normalize data to [0,1] range
+                    XTrainNorm = (XTrain - min(XTrain)) ./ (max(XTrain) - min(XTrain));
+                    XValNorm = (XVal - min(XTrain)) ./ (max(XTrain) - min(XTrain));
+                    
+                    % Reshape for CNN [1, features, samples, 1]
+                    XTrainCNN = permute(reshape(XTrainNorm', [1, size(XTrainNorm,2), size(XTrainNorm,1), 1]), [1 2 4 3]);
+                    XValCNN = permute(reshape(XValNorm', [1, size(XValNorm,2), size(XValNorm,1), 1]), [1 2 4 3]);
+                    
+                    % Define CNN architecture
+                    layers = [
+                        imageInputLayer([1 size(XTrain,2) 1])
+                        convolution2dLayer([1 3], 32, 'Padding', 'same')
+                        batchNormalizationLayer()
+                        reluLayer()
+                        maxPooling2dLayer([1 2], 'Stride', [1 1])
+                        convolution2dLayer([1 3], 64, 'Padding', 'same')
+                        batchNormalizationLayer()
+                        reluLayer()
+                        fullyConnectedLayer(64)
+                        reluLayer()
+                        dropoutLayer(0.5)
+                        fullyConnectedLayer(6)
+                        softmaxLayer()
+                        classificationLayer];
+                    
+                    % Training options
+                    options = trainingOptions('adam', ...
+                        'MaxEpochs', 30, ...
+                        'MiniBatchSize', 32, ...
+                        'ValidationData', {XValCNN, yVal}, ...
+                        'Plots', 'training-progress');
+                        %'ExecutionEnvironment', 'cpu');
+                    
+                    % Train model
+                    net = trainNetwork(XTrainCNN, yTrain, layers, options);
+                    
+                    % Calculate feature importance
+                    featureImp = app.calculateCNNFeatureImportance(net, XTrainCNN, yTrain);
+                    
+                    % Store trained model
+                    app.TrainedModels.CNN = struct(...
+                        'net', net, ...
+                        'min', min(XTrain), ...
+                        'max', max(XTrain), ...
+                        'Accuracy', sum(classify(net, XValCNN) == yVal)/numel(yVal), ...
+                        'FeatureImportance', featureImp);
+            end
+            
+            % Update UI components
+            app.plotModelPerformance();
+            app.plotFeatureImportance();
+            
+            % Enable prediction buttons
+            modelField = regexprep(modelType, '\s*\(Built-in\)', '');
+            accuracy = app.TrainedModels.(modelField).Accuracy;
+            app.ProgressBar.Value = 100;
+            app.updateStatus([modelType ' trained (Accuracy: ' sprintf('%.1f%%', accuracy*100) ')'], 'green');
+            app.PredictButton.Enable = 'on';
+            app.GenerateReportButton.Enable = 'on';
+            app.ManualPredictButton.Enable = 'on';
+            
+        catch ME
+            % Error handling
+            app.ProgressBar.Value = 0;
+            app.updateStatus(['Training error: ' ME.message], 'red');
+            uialert(app.UIFigure, ME.message, 'Training Error');
+            
+            % Clean up training figure if it exists
+            if isfield(app, 'TrainingFigure') && isvalid(app.TrainingFigure)
+                close(app.TrainingFigure);
+            end
         end
     end
-end
 
-   function featureImp = calculateLSTMFeatureImportance(~, net, XCell, y)
+       function featureImp = calculateLSTMFeatureImportance(~, net, XCell, y)
     % Get number of features
     numFeatures = size(XCell{1}, 1);
     numObservations = numel(XCell);
@@ -1609,7 +1447,7 @@ end
             end
         end
         
-    function plotFeatureImportance(app)
+      function plotFeatureImportance(app)
     cla(app.FeatureImportanceAxes);
     
     modelType = app.ModelSelectionDropDown.Value;
@@ -1617,59 +1455,43 @@ end
     
     if isfield(app.TrainedModels, modelField) && isfield(app.TrainedModels.(modelField), 'FeatureImportance')
         imp = app.TrainedModels.(modelField).FeatureImportance;
-        
-        % Define all features (original 7 + additional gases)
-        allFeatures = {'H₂', 'CH₄', 'C₂H₆', 'C₂H₄', 'C₂H₂', 'CO', 'CO₂', 'H₂O', 'Temp', 'Load'};
-        varNames = {'h2', 'ch4', 'c2h6', 'c2h4', 'c2h2', 'co', 'co2', 'h2o', 'temperature', 'load'};
-        
-        % Match importance values to features (handle cases where not all features were used)
-        fullImp = zeros(1, length(allFeatures));
-        for i = 1:length(varNames)
-            if i <= length(imp)  % Ensure we don't exceed importance array bounds
-                fullImp(i) = imp(i);
-            end
-        end
+        features = {'H2','CH4','C2H6','C2H4','C2H2','Temperature','Load'};
         
         % Handle NaN/invalid values
-        if any(isnan(fullImp)) || all(fullImp == 0)
-            fullImp = ones(1, length(allFeatures))/length(allFeatures); % Equal importance
+        if any(isnan(imp)) || all(imp == 0)
+            imp = ones(1,7)/7; % Default equal importance
             text(app.FeatureImportanceAxes, 0.5, 0.3, ...
                 'Using default importance values', ...
                 'HorizontalAlignment', 'center');
         end
         
-        % Sort features by importance
-        [sortedImp, idx] = sort(fullImp, 'descend');
-        sortedFeatures = allFeatures(idx);
+        % Sort features
+        [sortedImp, idx] = sort(imp, 'descend');
+        sortedFeatures = features(idx);
         
-        % Create plot with minimum bar height for visibility
-        minHeight = 0.01; % 1% minimum height
+        % Create plot with minimum bar height
+        minHeight = 0.01; % Ensure bars are always visible
         barValues = max(sortedImp, minHeight);
         
-        % Create horizontal bar plot
         bh = barh(app.FeatureImportanceAxes, barValues);
-        bh.FaceColor = [0.2 0.4 0.8]; % Nice blue color
+        bh.FaceColor = [0.2 0.4 0.8];
         bh.BarWidth = 0.8;
         
         % Configure axes
-        app.FeatureImportanceAxes.YTick = 1:length(allFeatures);
+        app.FeatureImportanceAxes.YTick = 1:length(features);
         app.FeatureImportanceAxes.YTickLabel = sortedFeatures;
-        app.FeatureImportanceAxes.YLim = [0.4 length(allFeatures)+0.6];
+        app.FeatureImportanceAxes.YLim = [0.4 length(features)+0.6];
         app.FeatureImportanceAxes.XLim = [0 max(barValues)*1.1];
         title(app.FeatureImportanceAxes, 'Feature Importance');
-        xlabel(app.FeatureImportanceAxes, 'Importance Score');
-        grid(app.FeatureImportanceAxes, 'on');
         
         % Add value labels
         for i = 1:length(sortedImp)
             text(app.FeatureImportanceAxes, barValues(i)/2, i, ...
                 sprintf('%.3f', sortedImp(i)), ...
-                'Color', 'white', 'FontWeight', 'bold', ...
-                'HorizontalAlignment', 'center');
+                'Color', 'white', 'FontWeight', 'bold');
         end
         
     else
-        % No feature importance data available
         text(app.FeatureImportanceAxes, 0.5, 0.5, ...
             'Feature importance data not available', ...
             'HorizontalAlignment', 'center');
@@ -1677,18 +1499,18 @@ end
     end
 end
 
-  function predictWithModel(app, ~, ~)
+        function predictWithModel(app, ~, ~)
     % Make predictions using trained model
     modelType = app.ModelSelectionDropDown.Value;
     data = app.TransformerData;
 
-    if isempty(data) || ~istable(data)
+    if isempty(data) || ~istable(data) % Added ~istable check for robustness
         app.updateStatus('No data available or data is not a table for prediction', 'red');
         return;
     end
 
     % Ensure the model type is valid and exists in app.TrainedModels
-    modelField = regexprep(modelType, '\s*\(Built-in\)', '');
+    modelField = regexprep(modelType, '\s*\(Built-in\)', ''); % Clean up name if needed
     if ~isfield(app.TrainedModels, modelField)
         app.updateStatus(['No ' modelType ' model trained. Please train the model first.'], 'red');
         return;
@@ -1698,13 +1520,13 @@ end
     app.ProgressBar.Value = 20;
 
     try
-        % Prediction uses original 6 gases + temp/load
-        predVars = {'h2','ch4','c2h6','c2h4','c2h2','temperature','load'};
-        if ~all(ismember(predVars, data.Properties.VariableNames))
-            missingCols = predVars(~ismember(predVars, data.Properties.VariableNames));
-            error('Missing required columns: %s', strjoin(missingCols, ', '));
+        % Prepare data
+        featureNames = {'h2','ch4','c2h6','c2h4','c2h2','temperature','load'};
+        if ~all(ismember(featureNames, data.Properties.VariableNames))
+            missingCols = featureNames(~ismember(featureNames, data.Properties.VariableNames));
+            error('Missing one or more required feature columns in data for prediction: %s', strjoin(missingCols, ', '));
         end
-        X = table2array(data(:, predVars));
+        X = table2array(data(:, featureNames));
 
         % Check for NaN or Inf values
         if any(~isfinite(X(:)))
@@ -1712,7 +1534,7 @@ end
         end
 
         % Get the trained model
-        modelInfo = app.TrainedModels.(modelField);
+        modelInfo = app.TrainedModels.(modelField); % Use modelField here for consistency
 
         % Initialize variables for prediction
         YPred = [];
@@ -1720,115 +1542,106 @@ end
 
         switch modelType
             case 'LSTM'
+                % --- IMPORTANT: Check for normalization parameters ---
                 if ~isfield(modelInfo, 'normParams') || isempty(modelInfo.normParams)
-                    error('LSTM normalization parameters not found. Please retrain the LSTM model.');
+                    error('LSTM normalization parameters (normParams) not found. Please retrain the LSTM model.');
                 end
 
-                XNorm = mapminmax('apply', X', modelInfo.normParams)';
-                XCell = arrayfun(@(i) XNorm(i,:)', 1:size(XNorm,1), 'UniformOutput', false)';
-                [YPred, scores] = classify(modelInfo.net, XCell);
+                % Normalize data using stored parameters
+                % X is [numObservations x numFeatures] (e.g., 100 x 7)
+                % mapminmax expects data in columns, so transpose X to [numFeatures x numObservations]
+                XNorm = mapminmax('apply', X', modelInfo.normParams); % Output XNorm is now [numFeatures x numObservations]
+
+                % Reshape for LSTM prediction: Create a cell array of sequences
+                % Each cell should contain a [numFeatures x 1] column vector
+                numObservations = size(XNorm, 2); % Now numObservations is the 2nd dim of XNorm
+
+                % Add check if there are no observations to predict
+                if numObservations == 0
+                    app.updateStatus('No data points to predict after preparation.', 'red');
+                    return;
+                end
+
+                XTestCell = cell(numObservations, 1);
+                for i = 1:numObservations
+                    XTestCell{i} = XNorm(:, i); % Each cell gets a (7x1) column vector
+                end
+
+                % Perform classification
+                [YPred, scores] = classify(modelInfo.net, XTestCell);
 
             case 'SVM'
-                if isempty(app.SVM_Mean) || isempty(app.SVM_Std)
-                    error('SVM standardization parameters not found. Please retrain the SVM model.');
-                end
-                XStd = (X - app.SVM_Mean) ./ app.SVM_Std;
-                [YPred, ~, ~, decisionValues] = predict(modelInfo.model, XStd);
-                scores = 1./(1+exp(-decisionValues));
-                scores = scores ./ sum(scores, 2);
-                YPred = categorical(YPred);
+                    % Standardize data using stored parameters
+                        if isempty(app.SVM_Mean) || isempty(app.SVM_Std)
+                            error('SVM standardization parameters not found. Please retrain the SVM model.');
+                        end
+                        XStd = (X - app.SVM_Mean) ./ app.SVM_Std;
+                        [YPred, ~, ~, decisionValues] = predict(modelInfo.model, XStd);
+                        % Convert decision values to probabilities
+                        scores = 1./(1+exp(-decisionValues));
+                        scores = scores ./ sum(scores, 2);
 
             case 'CNN'
+                % Normalize data
                 if ~isfield(modelInfo, 'min') || ~isfield(modelInfo, 'max') || isempty(modelInfo.min) || isempty(modelInfo.max)
                     error('CNN normalization parameters not found. Please retrain the CNN model.');
                 end
-                XNorm = (X - modelInfo.min) ./ (modelInfo.max - modelInfo.min);
-                XCNN = permute(reshape(XNorm', [1, size(XNorm,2), 1, size(XNorm,1)]), [1 2 4 3]);
-                [YPred, scores] = classify(modelInfo.net, XCNN);
+                rangeVal = modelInfo.max - modelInfo.min;
+                rangeVal(rangeVal == 0) = 1; % Avoid division by zero for constant features
+                XNorm = (X - modelInfo.min) ./ rangeVal;
+
+                % Reshape for CNN [1, features, 1, samples]
+                XTest = reshape(XNorm', [1, size(XNorm,2), 1, size(XNorm,1)]);
+                [YPred, scores] = classify(modelInfo.net, XTest);
         end
 
+        % --- Check if YPred is empty before accessing elements ---
         if isempty(YPred)
-            app.updateStatus('Prediction resulted in empty output', 'red');
+            app.updateStatus('Prediction resulted in empty output. No data to display.', 'red');
             return;
         end
 
-        % Get confidence for latest prediction
-        [maxScore, ~] = max(scores(end,:));
-        confidence = maxScore * 100;
-        prediction = YPred(end);
+        % Get confidence scores
+        [maxScores, ~] = max(scores, [], 2);
+        confidence = arrayfun(@(i) sprintf('%.1f%%', maxScores(i)*100), 1:size(scores,1), 'UniformOutput', false)';
 
-        % Default values for display
-        defaultVals = struct( ...
-            'co',   360, ...
-            'co2',   25, ...
-            'h2o',   15, ...
-            'temperature', 25, ...
-            'load', 50 ...
-        );
+        % Create results table
+        results = table(YPred, confidence, 'VariableNames', {'Prediction', 'Confidence'});
 
-        % Build diagnosis text with all available gases
+        % Display detailed diagnosis for latest sample
+        % Using featureNames for robustness in column names
+        latestFeatures = array2table(X(end,:), 'VariableNames', featureNames); % X(end,:) assumes X is not empty
+        
+        % Assign latestPred and latestConfidence here, after YPred is confirmed not empty
+        latestPred = YPred(end);
+        latestConfidence = maxScores(end)*100;
+
+        % Build diagnosis text
         diagnosisText = sprintf('%s Model Diagnosis:\n\n', modelType);
-        diagnosisText = [diagnosisText sprintf('Predicted Fault: %s (%.1f%% confidence)\n\n', char(prediction), confidence)];
-
-        % All gases
-        allGases = {
-            'h2',   'H₂';
-            'ch4',  'CH₄';
-            'c2h6', 'C₂H₆';
-            'c2h4', 'C₂H₄';
-            'c2h2', 'C₂H₂';
-            'co',   'CO';
-            'co2',  'CO₂';
-            'h2o',  'H₂O'
-        };
-
+        diagnosisText = [diagnosisText sprintf('Predicted Fault: %s (%.1f%% confidence)\n\n', char(latestPred), latestConfidence)];
         diagnosisText = [diagnosisText 'Gas Concentrations (ppm):\n'];
-        for i = 1:size(allGases,1)
-            varName = allGases{i,1};
-            prettyName = allGases{i,2};
-
-            if ismember(varName, data.Properties.VariableNames)
-                val = data.(varName)(end);
-                if ~isfinite(val)
-                    val = defaultVals.(varName); % Use default if NaN or Inf
-                end
-            elseif isfield(defaultVals, varName)
-                val = defaultVals.(varName); % Use default if column missing
-            else
-                val = 0; % fallback
-            end
-
-            diagnosisText = [diagnosisText sprintf('  %-4s: %6.2f\n', prettyName, val)];
-        end
-
-        % Operating conditions
-        tempVal = data.temperature(end);
-        if ~isfinite(tempVal)
-            tempVal = defaultVals.temperature;
-        end
-
-        loadVal = data.load(end);
-        if ~isfinite(loadVal)
-            loadVal = defaultVals.load;
-        end
-
-        diagnosisText = [diagnosisText sprintf('\nOperating Conditions:\n')];
-        diagnosisText = [diagnosisText sprintf('  Temperature: %.1f°C\n', tempVal)];
-        diagnosisText = [diagnosisText sprintf('  Load:        %.1f%%\n', loadVal)];
+        diagnosisText = [diagnosisText sprintf('  H2: %.2f\n', latestFeatures.h2)];
+        diagnosisText = [diagnosisText sprintf('  CH4: %.2f\n', latestFeatures.ch4)];
+        diagnosisText = [diagnosisText sprintf('  C2H6: %.2f\n', latestFeatures.c2h6)];
+        diagnosisText = [diagnosisText sprintf('  C2H4: %.2f\n', latestFeatures.c2h4)];
+        diagnosisText = [diagnosisText sprintf('  C2H2: %.2f\n\n', latestFeatures.c2h2)];
+        diagnosisText = [diagnosisText sprintf('Operating Conditions:\n  Temperature: %.1f°C\n  Load: %.1f%%\n', ...
+            latestFeatures.temperature, latestFeatures.load)];
 
         % Add recommended actions
-        diagnosisText = [diagnosisText sprintf('\nRECOMMENDED ACTIONS:\n')];
-        switch char(prediction)
+        switch char(latestPred)
             case 'Normal'
-                diagnosisText = [diagnosisText '  - Continue regular monitoring'];
-            case {'PD', 'D1', 'D2'}
-                diagnosisText = [diagnosisText '  - Inspect for partial discharge\n' ...
-                              '  - Check bushings and tap changers'];
-            case {'T1', 'T2'}
-                diagnosisText = [diagnosisText '  - Check for overheating\n' ...
-                              '  - Inspect cooling system'];
-            otherwise
-                diagnosisText = [diagnosisText '  - Conduct comprehensive inspection'];
+                diagnosisText = [diagnosisText '\nRecommendation: Continue regular monitoring'];
+            case 'D1'
+                diagnosisText = [diagnosisText '\nRecommendation: Check for partial discharge'];
+            case 'D2'
+                diagnosisText = [diagnosisText '\nRecommendation: Inspect for high energy discharge'];
+            case 'T1'
+                diagnosisText = [diagnosisText '\nRecommendation: Check for thermal faults <300°C'];
+            case 'T2'
+                diagnosisText = [diagnosisText '\nRecommendation: Inspect for thermal faults >700°C'];
+            case 'PD'
+                diagnosisText = [diagnosisText '\nRecommendation: Investigate partial discharge sources'];
         end
 
         % Update UI
@@ -1839,13 +1652,17 @@ end
     catch ME
         app.ProgressBar.Value = 0;
         app.updateStatus(['Prediction error: ' ME.message], 'red');
+        uialert(app.UIFigure, ME.message, 'Prediction Error');
+
+        % Display error details
         app.AIDiagnosisTextArea.Value = sprintf(...
             'Prediction failed:\n\nError: %s\n\nStack Trace:\n%s', ...
-            ME.message, getReport(ME, 'extended', 'hyperlinks', 'off'));
+            ME.message, ...
+            getReport(ME, 'extended', 'hyperlinks', 'off'));
     end
 end
 
-   
+
         function connectToCloud(app, ~, ~)
             app.updateStatus('Testing cloud connection...', 'yellow');
             
@@ -1904,42 +1721,12 @@ end
                 uialert(app.UIFigure, ME.message, 'Cloud Save Error');
             end
         end
-        
-               function showConfusionMatrixInNewFigure(~, trueLabels, predictedLabels, modelType)
-            try
-                % Ensure predictions and true labels are categorical with same categories
-                trueLabels = categorical(trueLabels(:));
-                predictedLabels = categorical(predictedLabels(:), categories(trueLabels));
-            
-                % Calculate accuracy
-                accuracy = sum(predictedLabels == trueLabels) / numel(trueLabels) * 100;
-            
-                % Create confusion matrix with normalized summaries and accuracy in title
-                figure('Name', [modelType ' Confusion Matrix'], 'NumberTitle', 'off');
-                confusionchart(trueLabels, predictedLabels, ...
-                    'Title', sprintf('%s Confusion Matrix (Accuracy: %.2f%%)', modelType, accuracy), ...
-                    'RowSummary', 'row-normalized', ...
-                    'ColumnSummary', 'column-normalized');
-            
-            catch ME
-                warning('Failed to display confusion matrix for %s model: %s', modelType, ME.message);
-                disp('--- Debug Info ---');
-                disp('Unique true labels:'); disp(unique(trueLabels));
-                disp('Unique predicted labels:');
-                try
-                    disp(unique(predictedLabels));
-                catch innerME
-                    warning('Failed to inspect predicted labels: %s', innerME().message);
-                end
-            end
-        end
-
     end
     
  methods (Access = public)
         
         % App initialization and construction
-        function app = TransformerDiagnosticApp3
+        function app = TransformerDiagnosticApp
             % Create and configure components
             createComponents(app);
             
@@ -2046,7 +1833,7 @@ end
             
             % Create AI Analysis Tab
             app.AITab = uitab(app.TabGroup, 'Title', 'AI Analysis');
-          
+            
             % Create ModelSelectionDropDown
             app.ModelSelectionDropDown = uidropdown(app.AITab);
             app.ModelSelectionDropDown.Position = [50 600 150 22];
@@ -2201,7 +1988,7 @@ end
     methods (Static)
         function runApp()
             % Run the application
-            app = TransformerDiagnosticApp3;
+            app = TransformerDiagnosticApp;
         end
     end
 end

@@ -1,4 +1,4 @@
-function faultType = analyzeRogersRatio(H2, CH4, C2H6, C2H2, C2H4)
+function faultType = rogersRatio(H2, CH4, C2H6, C2H2, C2H4)
     % Prevent division by zero by adding a small epsilon
     eps = 1e-5;
     ratio1 = (CH4 + eps) / (H2 + eps);          % CH4/H2
