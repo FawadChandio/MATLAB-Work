@@ -1,2 +1,19 @@
 # MATLAB-Work
-A collection of MATLAB scripts for various projects:  Basic Scripts: Fundamental operations. Data Analysis: Analysis and visualization. Signal Processing: Processing techniques. Machine Learning: Basic algorithms. Control Systems: Design tools. Image Processing: Image manipulation. Mathematical Modeling: Simulation scripts.
+
+This repository contains my MATLAB projects for various clients, including AI, transformer modeling, and fault prediction.
+
+## 📂 Current Project:
+### `AI_Transformer_GUI_App`
+A MATLAB GUI-based application for transformer health monitoring and prediction.
+
+## 🔧 Technologies:
+- MATLAB
+- Simulink
+- GUI App Designer
+
+## 🚀 Author:
+**Fawad Chandio**
+
+---
+
+### 📌 Repository Structure:
