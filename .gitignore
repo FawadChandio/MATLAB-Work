@@ -1,1 +1,19 @@
-# List of untracked files to ignore
+# MATLAB generated files
+*.asv
+*.autosave
+*.backup
+*.slxc
+*.slx~ 
+*.mdl~
+*.mex*
+*.mat
+
+# Simulink cache
+slprj/
+_simulinkcache/
+
+# VS Code & MATLAB hidden files
+.vscode/
+*.log
+*.DS_Store
+Thumbs.db
