@@ -1,0 +1,13 @@
+How to Run the Simulation
+
+To run the simulation, you need to save the provided MATLAB code as a .m file and then execute the main function from the MATLAB command window.
+
+   1. Save the Code: Copy the entire code block into a text editor and save it as a file named runEV.m.
+
+   2. Open MATLAB: Launch the MATLAB application.
+
+   3. Set the Path: Ensure that the directory where you saved runEV.m is in the MATLAB path. You can do this by     navigating to the directory in the "Current Folder" pane of the MATLAB interface.
+
+   4. Run the Script: In the MATLAB command window, type runEV and press Enter.
+
+The script will begin executing, starting with the API call to fetch live weather data.
